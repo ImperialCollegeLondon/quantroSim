@@ -46,71 +46,101 @@
 #' sim <- simulateMeth(methTruth, meth.platform = "methArrays", 
 #'                     nSamps = 5, nMol = 10^6)
 simulateMeth <- function(simulateMethTruthObject, meth.platform, nSamps, 
-                          nMol = NULL, verbose = TRUE, mua = NULL, 
-                          siga = NULL, mub = NULL, sigb = NULL,
-                          muOpt = NULL, sigOpt = NULL, muBG = NULL, 
-                          sigBG = NULL, muERR = NULL, sigERR = NULL)                         
+                         nMol = NULL, verbose = TRUE, mua = NULL, 
+                         siga = NULL, mub = NULL, sigb = NULL,
+                         muOpt = NULL, sigOpt = NULL, muBG = NULL, 
+                         sigBG = NULL, muERR = NULL, sigERR = NULL)                         
 {
-
-	if(!exists("objectType", where = simulateMethTruthObject)){
-		stop("Must supply a simulateMethTruthObject created from 
+  
+  if(!exists("objectType", where = simulateMethTruthObject)){
+    stop("Must supply a simulateMethTruthObject created from 
          simulateMethTruth().")
-	}
-
+  }
+  
   if( !(meth.platform %in% c("methArrays") ) ){
-	  stop("Platform not available. Must specify a platform from 
+    stop("Platform not available. Must specify a platform from 
          list.meth.platforms().")
-	}
-	
-	if(simulateMethTruthObject$objectType == "simulateMethTruthObject"){
-		rangeObject <- simulateMethTruthObject$methRange
-		if(is.null(nMol)){ stop("Must provide nMol to simulate DNA methylation.") }
-	} else { stop("The objectType is not supported. Must be an object from 
+  }
+  
+  if(simulateMethTruthObject$objectType == "simulateMethTruthObject"){
+    rangeObject <- simulateMethTruthObject$methRange
+    if(is.null(nMol)){ stop("Must provide nMol to simulate DNA methylation.") }
+  } else { stop("The objectType is not supported. Must be an object from 
                 simulateMethTruth().") }
-	
-	nProbes <- simulateMethTruthObject$nProbes
-	nGroups <- simulateMethTruthObject$nGroups
-	totSamps = nSamps * nGroups
+  
+  nProbes <- simulateMethTruthObject$nProbes
+  nGroups <- simulateMethTruthObject$nGroups
+  totSamps = nSamps * nGroups
   
   # DNA Methylation arrays
-	if(meth.platform == "methArrays"){
+  if(meth.platform == "methArrays"){
     if(verbose){
       message("Simulating DNA methylation samples using the meth.platform: ", 
               meth.platform)  
     }
-		ps <- pickLangmuir(objectType = simulateMethTruthObject$objectType, 
-              typePlatform = meth.platform, nProbes = nProbes, 
-              nSamps = nSamps, nGroups = nGroups, mua = mua, siga = siga, 
-              mub = mub, sigb = sigb, muOpt = muOpt, sigOpt = sigOpt, 
-              muBG = muBG, sigBG = sigBG, muERR = muERR, sigERR = sigERR)				
-
-		## Generating new samples
-		meth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
-                langmuirTrans(rangeObject[,ps$gID[x]] * nMol, a=ps$a[,x],
-                          b=ps$b[,x], d=0)*ps$errMeth[,x]									
-		})
-		rownames(meth) <- NULL
-		colnames(meth) <- sapply(1:totSamps, function(x){
-                          paste0("Sample_", formatC(x, flag=0, width=3))
-                      })
-
-		unmeth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
-                langmuirTrans((1 - rangeObject[,ps$gID[x]]) * nMol, a=ps$a[,x], 
-                           b=ps$b[,x], d=0) * ps$errUnmeth[,x]
-		})
-		rownames(unmeth) <- NULL
-		colnames(unmeth) <- colnames(meth)
-
-		pd <- data.frame("Sample_Name" = colnames(meth),
-					           "Group" = sapply(ps$gID, function(x) 
-                                paste0("Group_", formatC(x, flag=0, width=3))))
-
-		output = list("objectType" = "simulateMethObject", 
-                      "typePlatform" = meth.platform, "nProbes" = nProbes, 
-                      "nSamps" = nSamps, "nGroups" = nGroups, 
-                      "params" = ps, "pd" = pd, "meth" = round(meth, 0), 
-                      "unmeth" = round(unmeth,0))
-	}
-	return(output)
+    ps <- pickLangmuir(objectType = simulateMethTruthObject$objectType, 
+                       typePlatform = meth.platform, nProbes = nProbes, 
+                       nSamps = nSamps, nGroups = nGroups, mua = mua, siga = siga, 
+                       mub = mub, sigb = sigb, muOpt = muOpt, sigOpt = sigOpt, 
+                       muBG = muBG, sigBG = sigBG, muERR = muERR, sigERR = sigERR)				
+    
+    ## Generating new samples
+    #
+    #
+    ### START NEW code dd 2018-08-15 17:43 (HD).
+    #
+    if (nG == 1) {
+      
+      meth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
+        langmuirTrans(rangeObject[ps$gID[x]] * nMol, a=ps$a[,x],
+                      b=ps$b[,x], d=0)*ps$errMeth[,x]									
+      })      
+    } else {
+      #
+      ### END NEW code dd 2018-08-15 17:43 (HD).
+      #
+      meth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
+        langmuirTrans(rangeObject[,ps$gID[x]] * nMol, a=ps$a[,x],
+                      b=ps$b[,x], d=0)*ps$errMeth[,x]									
+      })
+    }
+    #
+    rownames(meth) <- NULL
+    colnames(meth) <- sapply(1:totSamps, function(x){
+      paste0("Sample_", formatC(x, flag=0, width=3))
+    })
+    
+    ### START NEW code dd 2018-08-16 11:17 (HD).
+    #
+    if (nG == 1) {
+      
+      unmeth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
+        langmuirTrans((1 - rangeObject[ps$gID[x]]) * nMol, a=ps$a[,x], 
+                      b=ps$b[,x], d=0) * ps$errUnmeth[,x]
+      })
+    } else {
+      #
+      ### END NEW code dd 2018-08-16 11:17 (HD).
+      #
+      unmeth <- sapply(1:totSamps, function(x){ dat = ps$opt[,x] + ps$d[,x] + 
+        langmuirTrans((1 - rangeObject[,ps$gID[x]]) * nMol, a=ps$a[,x], 
+                      b=ps$b[,x], d=0) * ps$errUnmeth[,x]      
+      })
+    }
+    #
+    rownames(unmeth) <- NULL
+    colnames(unmeth) <- colnames(meth)
+    
+    pd <- data.frame("Sample_Name" = colnames(meth),
+                     "Group" = sapply(ps$gID, function(x) 
+                       paste0("Group_", formatC(x, flag=0, width=3))))
+    
+    output = list("objectType" = "simulateMethObject", 
+                  "typePlatform" = meth.platform, "nProbes" = nProbes, 
+                  "nSamps" = nSamps, "nGroups" = nGroups, 
+                  "params" = ps, "pd" = pd, "meth" = round(meth, 0), 
+                  "unmeth" = round(unmeth,0))
+  }
+  return(output)
 }
 
